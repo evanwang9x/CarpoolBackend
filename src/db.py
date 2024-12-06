@@ -27,34 +27,28 @@ class User(db.Model):
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
     phone_number = db.Column(db.String, nullable=False)
-    image = db.Column(db.String)  # TO BE REVISED
     username = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     hosted_carpools = db.relationship("Carpool", back_populates="driver")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
-    pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_carpools")
-
+    pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_passengers")
+    
     def __init__(self, **kwargs):
         self.first_name = kwargs.get("first_name", "")
         self.last_name = kwargs.get("last_name", "")
         self.email = kwargs.get("email", "")
         self.phone_number = kwargs.get("phone_number", "")
-        self.image = kwargs.get("image")  # TO BE REVISED
         self.username = kwargs.get("username", "")
         self.password = kwargs.get("password", "")
-
-    def full_name(self):
-        return f"{self.first_name} {self.last_name}"
 
     def serialize(self):
         return {
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "full_name": self.full_name,
+            "full_name": f"{self.first_name} {self.last_name}",
             "email": self.email,
             "phone_number": self.phone_number,
-            "image": self.image,  # TO BE REVISED
             "username": self.username,
             "hosted_carpools": [c.simple_serialize() for c in self.hosted_carpools],
             "joined_carpools": [c.simple_serialize() for c in self.joined_carpools],
@@ -66,19 +60,9 @@ class User(db.Model):
             "id": self.id,
             "first_name": self.first_name,
             "last_name": self.last_name,
-            "full_name": self.full_name,
+            "full_name": f"{self.first_name} {self.last_name}",
             "email": self.email,
-            "phone_number": self.phone_number,
-            "image": self.image  # TO BE REVISED
-        }
-
-    def safe_serialize(self):
-        return {
-            "id": self.id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "full_name": self.full_name,
-            "username": self.username
+            "phone_number": self.phone_number
         }
 
 
@@ -86,7 +70,6 @@ class Carpool(db.Model):
     """
     Carpool Model
     """
-
     __tablename__ = "carpools"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     start_location = db.Column(db.String, nullable=False)
@@ -96,9 +79,10 @@ class Carpool(db.Model):
     price = db.Column(db.Float, nullable=False)
     car_type = db.Column(db.String, nullable=False)
     license_plate = db.Column(db.String, nullable=False)
-    driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
-    driver = db.relationship("User", back_populates="hosted_carpools")
+    image = db.Column(db.String, nullable=True)
+    driver_email = db.Column(db.String, db.ForeignKey("users.email"), nullable=False)
+    
+    driver = db.relationship("User", back_populates="hosted_carpools", foreign_keys=[driver_email])
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
     pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
 
@@ -110,7 +94,8 @@ class Carpool(db.Model):
         self.price = kwargs.get("price", 0.0)
         self.car_type = kwargs.get("car_type", "")
         self.license_plate = kwargs.get("license_plate", "")
-        self.driver_id = kwargs.get("driver_id")
+        self.image = kwargs.get("image")
+        self.driver_email = kwargs.get("driver_email")
 
     def serialize(self):
         current_riders = [self.driver.email] + [p.email for p in self.passengers]
@@ -124,6 +109,7 @@ class Carpool(db.Model):
             "price": self.price,
             "car_type": self.car_type,
             "license_plate": self.license_plate,
+            "image": self.image,
             "driver": self.driver.serialize(),
             "current_riders": current_riders,
             "pending_riders": [p.email for p in self.pending_passengers]
@@ -139,5 +125,6 @@ class Carpool(db.Model):
             "available_seats": self.total_capacity - len(self.passengers) - 1,
             "price": self.price,
             "car_type": self.car_type,
-            "license_plate": self.license_plate
+            "license_plate": self.license_plate,
+            "image": self.image
         }
