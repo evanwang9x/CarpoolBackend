@@ -201,18 +201,18 @@ def join_carpool(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/leave/", methods=["POST"])
 def leave_carpool(carpool_id):
     """
-    Endpoint for leaving a carpool using email
+    Endpoint for leaving a carpool by id
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
+    user_id = body.get("user_id")
+    if user_id is None:
         return failure_response("Missing email field", 400)
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
 
@@ -234,11 +234,11 @@ def cancel_pending_request(carpool_id):
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
+    user_id = body.get("user_id")
+    if user_id is None:
         return failure_response("Missing email field", 400)
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
 
@@ -260,11 +260,11 @@ def accept_rider(carpool_id):
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
+    user_id = body.get("user_id")
+    if user_id is None:
         return failure_response("Missing email field", 400)
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
 
@@ -291,11 +291,11 @@ def decline_rider(carpool_id):
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
+    user_id = body.get("user_id")
+    if user_id is None:
         return failure_response("Missing email field", 400)
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
 
@@ -318,10 +318,10 @@ def delete_carpool(carpool_id):
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
+    user_id = body.get("user_id")
+    if user_id is None:
         return failure_response("Missing email field", 400)
-    if user_email != carpool.driver.email:
+    if user_id != carpool.driver_id:
         return failure_response("Only the driver can delete this carpool!", 403)
 
     carpool.passengers.clear()
