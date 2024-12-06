@@ -88,15 +88,16 @@ def create_carpool():
     return success_response(new_carpool.serialize(), 201)
 
 
-@app.route("/api/carpools/")
+@app.route("/api/carpools/", methods=["POST"])
 def get_carpools():
     """
     Endpoint for getting filtered carpools
     """
-    destination = request.args.get("destination")
-    departure_location = request.args.get("departure_location")
-    min_time = request.args.get("min_time")
-    max_time = request.args.get("max_time")
+    body = json.loads(request.data)
+    destination = body.get("destination")
+    departure_location = body.get("departure_location")
+    min_time = body.get("min_time")
+    max_time = body.get("max_time")
 
     query = Carpool.query
 
@@ -167,6 +168,31 @@ def leave_carpool(carpool_id):
     carpool.passengers.remove(user)
     db.session.commit()
     return success_response(carpool.serialize())
+
+
+@app.route("/api/login/")
+def login():
+    """
+    Endpoint for user login authentication
+    Takes email and password in request body
+    Returns user data if credentials are valid
+    """
+    body = json.loads(request.data)
+    if not body.get("email") or not body.get("password"):
+        return failure_response("Missing email or password field", 400)
+
+    user = User.query.filter_by(email=body.get("email")).first()
+
+    if user is None:
+        return failure_response("User not found", 404)
+
+    if user.password != body.get("password"):
+        return failure_response("Invalid password", 401)
+
+    return success_response({
+        "message": "Successfully logged in",
+        "user": user.serialize()
+    })
 
 
 if __name__ == "__main__":

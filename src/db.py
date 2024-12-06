@@ -9,6 +9,13 @@ passenger_table = db.Table(
     db.Column("user_id", db.Integer, db.ForeignKey("users.id"))
 )
 
+pending_passenger_table = db.Table(
+    "pending_passenger",
+    db.Model.metadata,
+    db.Column("carpool_id", db.Integer, db.ForeignKey("carpools.id")),
+    db.Column("user_id", db.Integer, db.ForeignKey("users.id"))
+)
+
 
 class User(db.Model):
     """
@@ -18,24 +25,33 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
+    phone_number = db.Column(db.String, nullable=False)
+    image = db.Column(db.String)  # TO BE REVISED
     username = db.Column(db.String, nullable=False)
     password = db.Column(db.String, nullable=False)
     hosted_carpools = db.relationship("Carpool", back_populates="driver")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
+    pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_passengers")
 
     def __init__(self, **kwargs):
         self.name = kwargs.get("name", "")
         self.email = kwargs.get("email", "")
+        self.phone_number = kwargs.get("phone_number", "")
+        self.image = kwargs.get("image")  # TO BE REVISED
+        self.username = kwargs.get("username", "")
+        self.password = kwargs.get("password", "")
 
     def serialize(self):
         return {
             "id": self.id,
             "name": self.name,
             "email": self.email,
+            "phone_number": self.phone_number,
+            "image": self.image,  # TO BE REVISED
             "username": self.username,
-            "password": self.password,
             "hosted_carpools": [c.simple_serialize() for c in self.hosted_carpools],
-            "joined_carpools": [c.simple_serialize() for c in self.joined_carpools]
+            "joined_carpools": [c.simple_serialize() for c in self.joined_carpools],
+            "pending_carpools": [c.simple_serialize() for c in self.pending_carpools]
         }
 
     def simple_serialize(self):
@@ -43,8 +59,8 @@ class User(db.Model):
             "id": self.id,
             "name": self.name,
             "email": self.email,
-            "username": self.username,
-            "password": self.password
+            "phone_number": self.phone_number,
+            "image": self.image  # TO BE REVISED
         }
 
     def safe_serialize(self):
@@ -59,46 +75,58 @@ class Carpool(db.Model):
     """
     Carpool Model
     """
+
     __tablename__ = "carpools"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    departure_location = db.Column(db.String, nullable=False)
-    destination = db.Column(db.String, nullable=False)
-    departure_time = db.Column(db.Integer, nullable=False)
-    meeting_point = db.Column(db.String, nullable=False)
-    total_seats = db.Column(db.Integer, nullable=False)
+    start_location = db.Column(db.String, nullable=False)
+    end_location = db.Column(db.String, nullable=False)
+    start_time = db.Column(db.Integer, nullable=False)
+    total_capacity = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    car_type = db.Column(db.String, nullable=False)
+    license_plate = db.Column(db.String, nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
 
     driver = db.relationship("User", back_populates="hosted_carpools")
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
+    pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
 
     def __init__(self, **kwargs):
-        self.departure_location = kwargs.get("departure_location", "")
-        self.destination = kwargs.get("destination", "")
-        self.departure_time = kwargs.get("departure_time", 0)
-        self.meeting_point = kwargs.get("meeting_point", "")
-        self.total_seats = kwargs.get("total_seats", 0)
+        self.start_location = kwargs.get("start_location", "")
+        self.end_location = kwargs.get("end_location", "")
+        self.start_time = kwargs.get("start_time", 0)
+        self.total_capacity = kwargs.get("total_capacity", 0)
+        self.price = kwargs.get("price", 0.0)
+        self.car_type = kwargs.get("car_type", "")
+        self.license_plate = kwargs.get("license_plate", "")
         self.driver_id = kwargs.get("driver_id")
 
     def serialize(self):
+        current_riders = [self.driver.email] + [p.email for p in self.passengers]
         return {
             "id": self.id,
-            "departure_location": self.departure_location,
-            "destination": self.destination,
-            "departure_time": self.departure_time,
-            "meeting_point": self.meeting_point,
-            "total_seats": self.total_seats,
-            "available_seats": self.total_seats - len(self.passengers),
-            "driver": self.driver.simple_serialize(),
-            "passengers": [p.simple_serialize() for p in self.passengers]
+            "start_location": self.start_location,
+            "end_location": self.end_location,
+            "start_time": self.start_time,
+            "total_capacity": self.total_capacity,
+            "available_seats": self.total_capacity - len(self.passengers) - 1,
+            "price": self.price,
+            "car_type": self.car_type,
+            "license_plate": self.license_plate,
+            "driver": self.driver.serialize(),
+            "current_riders": current_riders,
+            "pending_riders": [p.email for p in self.pending_passengers]
         }
 
     def simple_serialize(self):
         return {
             "id": self.id,
-            "departure_location": self.departure_location,
-            "destination": self.destination,
-            "departure_time": self.departure_time,
-            "meeting_point": self.meeting_point,
-            "total_seats": self.total_seats,
-            "available_seats": self.total_seats - len(self.passengers)
+            "start_location": self.start_location,
+            "end_location": self.end_location,
+            "start_time": self.start_time,
+            "total_capacity": self.total_capacity,
+            "available_seats": self.total_capacity - len(self.passengers) - 1,
+            "price": self.price,
+            "car_type": self.car_type,
+            "license_plate": self.license_plate
         }
