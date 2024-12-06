@@ -1,6 +1,6 @@
 from flask import Flask, request
 import json
-from db import db, User, Carpool
+from db import db, User, Carpool, Asset
 
 app = Flask(__name__)
 db_filename = "carpool.db"
@@ -193,6 +193,23 @@ def login():
         "message": "Successfully logged in",
         "user": user.serialize()
     })
+
+
+@app.route("/api/upload/", methods=["POST"])
+def upload():
+    """
+    Endpoint for uploading an image to the server
+    temporary, used for testing
+    """
+    body = json.loads(request.data)
+    image_data = body.get("image_data")
+    if image_data is None:
+        return failure_response("No Base64 URL provided")
+
+    asset = Asset(image_data=image_data)
+    db.session.add(asset)
+    db.session.commit()
+    return success_response(asset.serialize(), 201)
 
 
 if __name__ == "__main__":
