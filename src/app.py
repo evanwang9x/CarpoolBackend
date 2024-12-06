@@ -96,15 +96,25 @@ def login():
         "user": user.serialize()
     })
 
+
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
     """
     Endpoint for creating a new carpool
     """
     body = json.loads(request.data)
-    required_fields = ["start_location", "end_location", "start_time",
-                       "total_capacity", "price", "car_type",
-                       "license_plate", "driver_id"]
+    carpool_data = {
+        "start_location": body.get("start_location"),
+        "end_location": body.get("end_location"),
+        "start_time": body.get("start_time"),
+        "total_capacity": body.get("total_capacity"),
+        "car_type": body.get("car_type"),
+        "license_plate": body.get("license_plate"),
+        "driver_id": body.get("driver_id")
+    }
+    for key, value in carpool_data.items():
+        if value is None:
+            return failure_response(f"'{key}' value is not included in the request", 400)
 
     # START TIME IS CURRENTLY IN INTEGERS
     if body.get("total_capacity", 0) <= 0:
@@ -112,23 +122,20 @@ def create_carpool():
     if body.get("price", 0) < 0:
         return failure_response("Price cannot be negative", 400)
 
-    if not all(key in body for key in required_fields):
-        return failure_response("Missing required fields", 400)
-
     driver = User.query.filter_by(id=body.get("driver_id")).first()
     if driver is None:
         return failure_response("Driver not found!", 404)
 
     new_carpool = Carpool(
-        start_location=body.get("start_location"),
-        end_location=body.get("end_location"),
-        start_time=body.get("start_time"),
-        total_capacity=body.get("total_capacity"),
-        price=body.get("price"),
-        car_type=body.get("car_type"),
-        license_plate=body.get("license_plate"),
-        image=body.get("image"),
-        driver_id=body.get("driver_id")
+        start_location=carpool_data.get("start_location"),
+        end_location=carpool_data.get("end_location"),
+        start_time=carpool_data.get("start_time"),
+        total_capacity=carpool_data.get("total_capacity"),
+        price=carpool_data.get("price"),
+        car_type=carpool_data.get("car_type"),
+        license_plate=carpool_data.get("license_plate"),
+        image=carpool_data.get("image"),
+        driver_id=carpool_data.get("driver_id")
     )
     db.session.add(new_carpool)
     db.session.commit()
@@ -145,6 +152,7 @@ def get_all_carpools():
         "carpools": [c.serialize() for c in carpools]
     })
 
+
 @app.route("/api/carpools/<int:carpool_id>/")
 def get_carpool(carpool_id):
     """
@@ -154,6 +162,7 @@ def get_carpool(carpool_id):
     if carpool is None:
         return failure_response("Carpool not found!")
     return success_response(carpool.serialize())
+
 
 @app.route("/api/carpools/<int:carpool_id>/join/", methods=["POST"])
 def join_carpool(carpool_id):
@@ -165,23 +174,23 @@ def join_carpool(carpool_id):
         return failure_response("Carpool not found!")
 
     body = json.loads(request.data)
-    user_email = body.get("email")
-    if user_email is None:
-        return failure_response("Missing email field", 400)
+    user_id = body.get("user_id")
+    if user_id is None:
+        return failure_response("Missing user_id field", 400)
 
-    user = User.query.filter_by(email=user_email).first()
+    user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
     if len(carpool.passengers) >= carpool.total_capacity - 1:
         return failure_response("Carpool is full!", 400)
 
-    current_riders = [carpool.driver.email] + [p.email for p in carpool.passengers]
-    pending_riders = [p.email for p in carpool.pending_passengers]
+    current_riders = [carpool.driver_id] + [p.id for p in carpool.passengers]
+    pending_riders = [p.id for p in carpool.pending_passengers]
 
-    if user_email in current_riders:
+    if user_id in current_riders:
         return failure_response("User is already a current rider!", 400)
 
-    if user_email in pending_riders:
+    if user_id in pending_riders:
         return failure_response("User is already a pending rider!", 400)
 
     carpool.pending_passengers.append(user)
@@ -213,8 +222,6 @@ def leave_carpool(carpool_id):
     carpool.passengers.remove(user)
     db.session.commit()
     return success_response(carpool.serialize())
-
-
 
 
 @app.route("/api/carpools/<int:carpool_id>/cancel_pending/", methods=["POST"])
