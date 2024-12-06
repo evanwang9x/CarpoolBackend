@@ -102,7 +102,10 @@ class Carpool(db.Model):
         self.end_location = kwargs.get("end_location")
         self.start_time = kwargs.get("start_time")
         self.total_capacity = kwargs.get("total_capacity")
-        self.price = float(kwargs.get("price", 0)) 
+        price = kwargs.get("price")
+        if price is None:
+            raise ValueError("Price cannot be None")
+        self.price = float(price)
         self.car_type = kwargs.get("car_type")
         self.license_plate = kwargs.get("license_plate")
         self.image = kwargs.get("image")

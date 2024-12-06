@@ -99,49 +99,36 @@ def login():
 
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
-    """
-    Endpoint for creating a new carpool
-    """
     body = json.loads(request.data)
-    carpool_data = {
-        "start_location": body.get("start_location"),
-        "end_location": body.get("end_location"),
-        "start_time": body.get("start_time"),
-        "total_capacity": body.get("total_capacity"),
-        "car_type": body.get("car_type"),
-        "license_plate": body.get("license_plate"),
-        "driver_id": body.get("driver_id")
-    }
-    for key, value in carpool_data.items():
-        if value is None:
-            return failure_response(f"'{key}' value is not included in the request", 400)
+    
+    # Validate price
+    price = body.get("price")
+    if price is None:
+        return failure_response("Price is required", 400)
+    
+    try:
+        price = float(price)
+        if price < 0:
+            return failure_response("Price cannot be negative", 400)
+    except (TypeError, ValueError):
+        return failure_response("Invalid price format", 400)
 
-    # START TIME IS CURRENTLY IN INTEGERS
-    if body.get("total_capacity", 0) <= 0:
-        return failure_response("Total capacity must be greater than 0", 400)
-    if body.get("price", 0) < 0:
-        return failure_response("Price cannot be negative", 400)
-
-    driver = User.query.filter_by(id=body.get("driver_id")).first()
-    if driver is None:
-        return failure_response("Driver not found!", 404)
+    # Rest of your validation code...
 
     new_carpool = Carpool(
-        start_location=carpool_data.get("start_location"),
-        end_location=carpool_data.get("end_location"),
-        start_time=carpool_data.get("start_time"),
-        total_capacity=carpool_data.get("total_capacity"),
-        price=carpool_data.get("price"),
-        car_type=carpool_data.get("car_type"),
-        license_plate=carpool_data.get("license_plate"),
-        image=carpool_data.get("image"),
-        driver_id=carpool_data.get("driver_id")
+        start_location=body.get("start_location"),
+        end_location=body.get("end_location"),
+        start_time=body.get("start_time"),
+        total_capacity=body.get("total_capacity"),
+        price=price,  # Pass the validated price
+        car_type=body.get("car_type"),
+        license_plate=body.get("license_plate"),
+        image=body.get("image"),
+        driver_id=body.get("driver_id")
     )
     db.session.add(new_carpool)
     db.session.commit()
     return success_response(new_carpool.serialize(), 201)
-
-
 @app.route("/api/carpools/all/")
 def get_all_carpools():
     """
