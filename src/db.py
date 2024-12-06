@@ -83,11 +83,8 @@ class User(db.Model):
 
 
 class Carpool(db.Model):
-    """
-    Carpool Model
-    """
     __tablename__ = "carpools"
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Integer, primary_key=True)
     start_location = db.Column(db.String, nullable=False)
     end_location = db.Column(db.String, nullable=False)
     start_time = db.Column(db.Integer, nullable=False)
@@ -95,24 +92,19 @@ class Carpool(db.Model):
     price = db.Column(db.Float, nullable=False)
     car_type = db.Column(db.String, nullable=False)
     license_plate = db.Column(db.String, nullable=False)
-    image = db.Column(db.String, nullable=True)
+    image = db.Column(db.String)
     driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    # driver_email = db.Column(db.String, db.ForeignKey("users.email"), nullable=False)
-    # driver = db.relationship("User", back_populates="hosted_carpools", foreign_keys=[driver_email])
-    passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
-    pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
 
     def __init__(self, **kwargs):
-        self.start_location = kwargs.get("start_location", "")
-        self.end_location = kwargs.get("end_location", "")
-        self.start_time = kwargs.get("start_time", 0)
-        self.total_capacity = kwargs.get("total_capacity", 0)
-        self.price = kwargs.get("price", 0.0)
-        self.car_type = kwargs.get("car_type", "")
-        self.license_plate = kwargs.get("license_plate", "")
+        self.start_location = kwargs.get("start_location")
+        self.end_location = kwargs.get("end_location")
+        self.start_time = kwargs.get("start_time")
+        self.total_capacity = kwargs.get("total_capacity")
+        self.price = float(kwargs.get("price", 0)) 
+        self.car_type = kwargs.get("car_type")
+        self.license_plate = kwargs.get("license_plate")
         self.image = kwargs.get("image")
         self.driver_id = kwargs.get("driver_id")
-
     def serialize(self):
         driver = User.query.filter_by(id=self.driver_id).first()
         current_riders = [driver.email] + [p.email for p in self.passengers]
