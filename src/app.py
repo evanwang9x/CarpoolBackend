@@ -1,6 +1,6 @@
 from flask import Flask, request
 import json
-from db import db, User, Carpool
+from db import db, User, Carpool, Asset
 
 app = Flask(__name__)
 db_filename = "carpool.db"
