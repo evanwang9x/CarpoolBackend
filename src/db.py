@@ -94,7 +94,9 @@ class Carpool(db.Model):
     license_plate = db.Column(db.String, nullable=False)
     image = db.Column(db.String)
     driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-
+    
+    passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
+    pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
     def __init__(self, **kwargs):
         self.start_location = kwargs.get("start_location")
         self.end_location = kwargs.get("end_location")
