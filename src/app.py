@@ -13,11 +13,22 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
+
 def success_response(data, code=200):
     return json.dumps(data), code
 
+
 def failure_response(message, code=404):
     return json.dumps({"error": message}), code
+
+
+@app.route("/api/users/")
+def get_users():
+    """
+    Endpoint for getting all users, does not include passwords
+    """
+    return success_response({"courses": [c.safe_serialize() for c in User.query.all()]}, 200)
+
 
 @app.route("/api/users/", methods=["POST"])
 def create_user():
@@ -30,13 +41,14 @@ def create_user():
     new_user = User(
         name=body.get("name"),
         email=body.get("email"),
-        username = body.get("username"),
-        password = body.get("password")
+        username=body.get("username"),
+        password=body.get("password")
     )
 
     db.session.add(new_user)
     db.session.commit()
     return success_response(new_user.serialize(), 201)
+
 
 @app.route("/api/users/<int:user_id>/")
 def get_user(user_id):
@@ -48,16 +60,17 @@ def get_user(user_id):
         return failure_response("User not found!")
     return success_response(user.serialize())
 
+
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
     """
     Endpoint for creating a new carpool
     """
     body = json.loads(request.data)
-    if not all(key in body for key in ["departure_location", "destination", "departure_time", 
-                                      "meeting_point", "total_seats", "driver_id"]):
+    if not all(key in body for key in ["departure_location", "destination", "departure_time",
+                                       "meeting_point", "total_seats", "driver_id"]):
         return failure_response("Missing required fields", 400)
-    
+
     driver = User.query.filter_by(id=body.get("driver_id")).first()
     if driver is None:
         return failure_response("Driver not found!", 404)
@@ -73,6 +86,7 @@ def create_carpool():
     db.session.add(new_carpool)
     db.session.commit()
     return success_response(new_carpool.serialize(), 201)
+
 
 @app.route("/api/carpools/")
 def get_carpools():
@@ -97,6 +111,7 @@ def get_carpools():
 
     carpools = query.all()
     return success_response({"carpools": [c.serialize() for c in carpools]})
+
 
 @app.route("/api/carpools/<int:carpool_id>/join/", methods=["POST"])
 def join_carpool(carpool_id):
@@ -127,6 +142,7 @@ def join_carpool(carpool_id):
     db.session.commit()
     return success_response(carpool.serialize())
 
+
 @app.route("/api/carpools/<int:carpool_id>/leave/", methods=["POST"])
 def leave_carpool(carpool_id):
     """
@@ -152,7 +168,6 @@ def leave_carpool(carpool_id):
     db.session.commit()
     return success_response(carpool.serialize())
 
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
-
-

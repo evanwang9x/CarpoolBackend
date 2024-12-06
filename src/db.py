@@ -9,6 +9,7 @@ passenger_table = db.Table(
     db.Column("user_id", db.Integer, db.ForeignKey("users.id"))
 )
 
+
 class User(db.Model):
     """
     User Model
@@ -17,8 +18,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False)
-    username = db.Column(db.String, nullable = False)
-    password = db.Column(db.String, nullable = False)
+    username = db.Column(db.String, nullable=False)
+    password = db.Column(db.String, nullable=False)
     hosted_carpools = db.relationship("Carpool", back_populates="driver")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
 
@@ -46,6 +47,14 @@ class User(db.Model):
             "password": self.password
         }
 
+    def safe_serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "username": self.username
+        }
+
+
 class Carpool(db.Model):
     """
     Carpool Model
@@ -54,11 +63,11 @@ class Carpool(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     departure_location = db.Column(db.String, nullable=False)
     destination = db.Column(db.String, nullable=False)
-    departure_time = db.Column(db.Integer, nullable=False)  
+    departure_time = db.Column(db.Integer, nullable=False)
     meeting_point = db.Column(db.String, nullable=False)
     total_seats = db.Column(db.Integer, nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    
+
     driver = db.relationship("User", back_populates="hosted_carpools")
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
 
