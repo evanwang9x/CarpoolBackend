@@ -72,6 +72,30 @@ def get_user(user_id):
     return success_response(user.serialize())
 
 
+@app.route("/api/login/", methods=["POST"])
+def login():
+    """
+    Endpoint for user login authentication
+    Takes email and password in request body
+    Returns user data if credentials are valid
+    """
+    body = json.loads(request.data)
+    if not body.get("email") or not body.get("password"):
+        return failure_response("Missing email or password field", 400)
+
+    user = User.query.filter_by(email=body.get("email")).first()
+
+    if user is None:
+        return failure_response("User not found", 404)
+
+    if user.password != body.get("password"):
+        return failure_response("Invalid password", 401)
+
+    return success_response({
+        "message": "Successfully logged in",
+        "user": user.serialize()
+    })
+
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
     """
@@ -121,6 +145,15 @@ def get_all_carpools():
         "carpools": [c.serialize() for c in carpools]
     })
 
+@app.route("/api/carpools/<int:carpool_id>/")
+def get_carpool(carpool_id):
+    """
+    Endpoint for getting a specific carpool by id
+    """
+    carpool = Carpool.query.filter_by(id=carpool_id).first()
+    if carpool is None:
+        return failure_response("Carpool not found!")
+    return success_response(carpool.serialize())
 
 @app.route("/api/carpools/<int:carpool_id>/join/", methods=["POST"])
 def join_carpool(carpool_id):
@@ -182,29 +215,6 @@ def leave_carpool(carpool_id):
     return success_response(carpool.serialize())
 
 
-@app.route("/api/login/", methods=["POST"])
-def login():
-    """
-    Endpoint for user login authentication
-    Takes email and password in request body
-    Returns user data if credentials are valid
-    """
-    body = json.loads(request.data)
-    if not body.get("email") or not body.get("password"):
-        return failure_response("Missing email or password field", 400)
-
-    user = User.query.filter_by(email=body.get("email")).first()
-
-    if user is None:
-        return failure_response("User not found", 404)
-
-    if user.password != body.get("password"):
-        return failure_response("Invalid password", 401)
-
-    return success_response({
-        "message": "Successfully logged in",
-        "user": user.serialize()
-    })
 
 
 @app.route("/api/carpools/<int:carpool_id>/cancel_pending/", methods=["POST"])
