@@ -63,13 +63,6 @@ class User(db.Model):
             "image": self.image  # TO BE REVISED
         }
 
-    def safe_serialize(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "username": self.username
-        }
-
 
 class Carpool(db.Model):
     """

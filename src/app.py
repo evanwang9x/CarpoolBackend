@@ -27,7 +27,7 @@ def get_users():
     """
     Endpoint for getting all users, does not include passwords
     """
-    return success_response({"courses": [c.safe_serialize() for c in User.query.all()]}, 200)
+    return success_response({"courses": [c.serialize() for c in User.query.all()]}, 200)
 
 
 @app.route("/api/users/", methods=["POST"])
