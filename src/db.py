@@ -23,28 +23,35 @@ class User(db.Model):
     """
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.String, nullable=False)
-    email = db.Column(db.String, nullable=False)
+    first_name = db.Column(db.String, nullable=False)
+    last_name = db.Column(db.String, nullable=False)
+    email = db.Column(db.String, nullable=False, unique=True)
     phone_number = db.Column(db.String, nullable=False)
     image = db.Column(db.String)  # TO BE REVISED
-    username = db.Column(db.String, nullable=False)
+    username = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     hosted_carpools = db.relationship("Carpool", back_populates="driver")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
-    pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_passengers")
+    pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_carpools")
 
     def __init__(self, **kwargs):
-        self.name = kwargs.get("name", "")
+        self.first_name = kwargs.get("first_name", "")
+        self.last_name = kwargs.get("last_name", "")
         self.email = kwargs.get("email", "")
         self.phone_number = kwargs.get("phone_number", "")
         self.image = kwargs.get("image")  # TO BE REVISED
         self.username = kwargs.get("username", "")
         self.password = kwargs.get("password", "")
 
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
     def serialize(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": self.full_name,
             "email": self.email,
             "phone_number": self.phone_number,
             "image": self.image,  # TO BE REVISED
@@ -57,7 +64,9 @@ class User(db.Model):
     def simple_serialize(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": self.full_name,
             "email": self.email,
             "phone_number": self.phone_number,
             "image": self.image  # TO BE REVISED
@@ -66,7 +75,9 @@ class User(db.Model):
     def safe_serialize(self):
         return {
             "id": self.id,
-            "name": self.name,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": self.full_name,
             "username": self.username
         }
 
