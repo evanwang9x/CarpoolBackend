@@ -80,7 +80,7 @@ def create_carpool():
     body = json.loads(request.data)
     required_fields = ["start_location", "end_location", "start_time",
                        "total_capacity", "price", "car_type",
-                       "license_plate", "driver_email"]
+                       "license_plate", "driver_id"]
 
     # START TIME IS CURRENTLY IN INTEGERS
     if body.get("total_capacity", 0) <= 0:
@@ -91,7 +91,7 @@ def create_carpool():
     if not all(key in body for key in required_fields):
         return failure_response("Missing required fields", 400)
 
-    driver = User.query.filter_by(email=body.get("driver_email")).first()
+    driver = User.query.filter_by(id=body.get("driver_id")).first()
     if driver is None:
         return failure_response("Driver not found!", 404)
 
@@ -104,7 +104,7 @@ def create_carpool():
         car_type=body.get("car_type"),
         license_plate=body.get("license_plate"),
         image=body.get("image"),
-        driver_email=body.get("driver_email")
+        driver_id=body.get("driver_id")
     )
     db.session.add(new_carpool)
     db.session.commit()
@@ -116,7 +116,6 @@ def get_all_carpools():
     """
     Endpoint for getting all carpools without any filters
     """
-
     carpools = Carpool.query.all()
     return success_response({
         "carpools": [c.serialize() for c in carpools]

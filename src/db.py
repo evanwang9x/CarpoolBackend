@@ -45,7 +45,7 @@ class User(db.Model):
     phone_number = db.Column(db.String, nullable=False)
     username = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    hosted_carpools = db.relationship("Carpool", back_populates="driver")
+    hosted_carpools = db.relationship("Carpool")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
     pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_passengers")
     
@@ -96,9 +96,9 @@ class Carpool(db.Model):
     car_type = db.Column(db.String, nullable=False)
     license_plate = db.Column(db.String, nullable=False)
     image = db.Column(db.String, nullable=True)
-    driver_email = db.Column(db.String, db.ForeignKey("users.email"), nullable=False)
-    
-    driver = db.relationship("User", back_populates="hosted_carpools", foreign_keys=[driver_email])
+    driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    # driver_email = db.Column(db.String, db.ForeignKey("users.email"), nullable=False)
+    # driver = db.relationship("User", back_populates="hosted_carpools", foreign_keys=[driver_email])
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
     pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
 
@@ -111,10 +111,11 @@ class Carpool(db.Model):
         self.car_type = kwargs.get("car_type", "")
         self.license_plate = kwargs.get("license_plate", "")
         self.image = kwargs.get("image")
-        self.driver_email = kwargs.get("driver_email")
+        self.driver_id = kwargs.get("driver_id")
 
     def serialize(self):
-        current_riders = [self.driver.email] + [p.email for p in self.passengers]
+        driver = User.query.filter_by(id=self.driver_id).first()
+        current_riders = [driver.email] + [p.email for p in self.passengers]
         return {
             "id": self.id,
             "start_location": self.start_location,
@@ -126,7 +127,7 @@ class Carpool(db.Model):
             "car_type": self.car_type,
             "license_plate": self.license_plate,
             "image": self.image,
-            "driver": self.driver.serialize(),
+            "driver": driver.simple_serialize(),
             "current_riders": current_riders,
             "pending_riders": [p.email for p in self.pending_passengers]
         }
@@ -144,7 +145,8 @@ class Carpool(db.Model):
             "license_plate": self.license_plate,
             "image": self.image
         }
-    
+
+
 class Asset(db.Model):
     """
     Asset model
