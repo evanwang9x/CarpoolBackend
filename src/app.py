@@ -310,5 +310,22 @@ def delete_carpool(carpool_id):
     return success_response({
         "message": "Carpool successfully deleted"
     })
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
+
+@app.route("/api/upload/", methods=["POST"])
+def upload():
+    """
+    Endpoint for uploading an image to the server
+    temporary, used for testing
+    """
+    body = json.loads(request.data)
+    image_data = body.get("image_data")
+    if image_data is None:
+        return failure_response("No Base64 URL provided")
+
+    asset = Asset(image_data=image_data)
+    db.session.add(asset)
+    db.session.commit()
+    return success_response(asset.serialize(), 201)
