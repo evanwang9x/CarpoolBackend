@@ -188,7 +188,111 @@ def login():
         "user": user.serialize()
     })
 
+@app.route("/api/carpools/<int:carpool_id>/cancel_pending/", methods=["POST"])
+def cancel_pending_request(carpool_id):
+    """
+    Endpoint for canceling a pending ride request
+    """
+    carpool = Carpool.query.filter_by(id=carpool_id).first()
+    if carpool is None:
+        return failure_response("Carpool not found!")
+
+    body = json.loads(request.data)
+    user_email = body.get("email")
+    if user_email is None:
+        return failure_response("Missing email field", 400)
+
+    user = User.query.filter_by(email=user_email).first()
+    if user is None:
+        return failure_response("User not found!")
+
+    if user not in carpool.pending_passengers:
+        return failure_response("User is not in pending riders list!", 400)
+
+    carpool.pending_passengers.remove(user)
+    db.session.commit()
+    return success_response(carpool.serialize())
 
 
+@app.route("/api/carpools/<int:carpool_id>/accept_rider/", methods=["POST"])
+def accept_rider(carpool_id):
+    """
+    Endpoint for accepting a pending rider into the carpool
+    """
+    carpool = Carpool.query.filter_by(id=carpool_id).first()
+    if carpool is None:
+        return failure_response("Carpool not found!")
+
+    body = json.loads(request.data)
+    user_email = body.get("email")
+    if user_email is None:
+        return failure_response("Missing email field", 400)
+
+    user = User.query.filter_by(email=user_email).first()
+    if user is None:
+        return failure_response("User not found!")
+
+    if user not in carpool.pending_passengers:
+        return failure_response("User is not in pending riders list!", 400)
+
+    if len(carpool.passengers) >= carpool.total_capacity - 1:
+        return failure_response("Carpool is full!", 400)
+
+    carpool.pending_passengers.remove(user)
+    carpool.passengers.append(user)
+    
+    db.session.commit()
+    return success_response(carpool.serialize())
+
+@app.route("/api/carpools/<int:carpool_id>/decline_rider/", methods=["POST"])
+def decline_rider(carpool_id):
+    """
+    Endpoint for declining a pending rider's request to join the carpool
+    """
+    carpool = Carpool.query.filter_by(id=carpool_id).first()
+    if carpool is None:
+        return failure_response("Carpool not found!")
+
+    body = json.loads(request.data)
+    user_email = body.get("email")
+    if user_email is None:
+        return failure_response("Missing email field", 400)
+
+    user = User.query.filter_by(email=user_email).first()
+    if user is None:
+        return failure_response("User not found!")
+
+    if user not in carpool.pending_passengers:
+        return failure_response("User is not in pending riders list!", 400)
+
+    carpool.pending_passengers.remove(user)
+    
+    db.session.commit()
+    return success_response(carpool.serialize())
+
+
+@app.route("/api/carpools/<int:carpool_id>/", methods=["DELETE"])
+def delete_carpool(carpool_id):
+    """
+    Endpoint for deleting a carpool. ONLY DRIVER CAN DELETE
+    """
+    carpool = Carpool.query.filter_by(id=carpool_id).first()
+    if carpool is None:
+        return failure_response("Carpool not found!")
+
+    body = json.loads(request.data)
+    user_email = body.get("email")
+    if user_email != carpool.driver.email:
+        return failure_response("Only the driver can delete this carpool!", 403)
+
+    carpool.passengers.clear()
+    carpool.pending_passengers.clear()
+    
+    db.session.delete(carpool)
+    db.session.commit()
+    
+    return success_response({
+        "message": "Carpool successfully deleted"
+    })
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
