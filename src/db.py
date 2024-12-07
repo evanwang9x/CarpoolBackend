@@ -48,7 +48,7 @@ class User(db.Model):
     hosted_carpools = db.relationship("Carpool")
     joined_carpools = db.relationship("Carpool", secondary=passenger_table, back_populates="passengers")
     pending_carpools = db.relationship("Carpool", secondary=pending_passenger_table, back_populates="pending_passengers")
-    
+
     def __init__(self, **kwargs):
         self.first_name = kwargs.get("first_name", "")
         self.last_name = kwargs.get("last_name", "")
@@ -87,21 +87,20 @@ class Carpool(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_location = db.Column(db.String, nullable=False)
     end_location = db.Column(db.String, nullable=False)
-    start_time = db.Column(db.String, nullable=False) 
+    start_time = db.Column(db.String, nullable=False)
     total_capacity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
     car_type = db.Column(db.String, nullable=False)
     license_plate = db.Column(db.String, nullable=False)
-    image = db.Column(db.String)
+    image_id = db.Column(db.Integer, db.ForeignKey("assets.id"), nullable=False)
     driver_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
     pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
 
     def __init__(self, **kwargs):
         self.start_location = kwargs.get("start_location")
         self.end_location = kwargs.get("end_location")
-        self.start_time = kwargs.get("start_time") 
+        self.start_time = kwargs.get("start_time")
         self.total_capacity = kwargs.get("total_capacity")
         price = kwargs.get("price")
         if price is None:
@@ -109,8 +108,9 @@ class Carpool(db.Model):
         self.price = float(price)
         self.car_type = kwargs.get("car_type")
         self.license_plate = kwargs.get("license_plate")
-        self.image = kwargs.get("image")
+        self.image_id = kwargs.get("image_id")
         self.driver_id = kwargs.get("driver_id")
+
     def serialize(self):
         driver = User.query.filter_by(id=self.driver_id).first()
         current_riders = [driver.email] + [p.email for p in self.passengers]
@@ -124,7 +124,7 @@ class Carpool(db.Model):
             "price": self.price,
             "car_type": self.car_type,
             "license_plate": self.license_plate,
-            "image": self.image,
+            "image": Asset.query.filter_by(id=self.image_id).first().serialize(),
             "driver": driver.simple_serialize(),
             "current_riders": current_riders,
             "pending_riders": [p.email for p in self.pending_passengers]
@@ -150,7 +150,7 @@ class Asset(db.Model):
     Asset model
     """
 
-    __tablename__ = "asset"
+    __tablename__ = "assets"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     base_url = db.Column(db.String, nullable=True)
     salt = db.Column(db.Integer, nullable=False)
@@ -167,10 +167,10 @@ class Asset(db.Model):
 
     def serialize(self):
         return {
+            "id": self.id,
             "url": f"{self.base_url}/{self.salt}.{self.extension}",
             "created_at": str(self.created_at)
         }
-
 
     def create(self, image_data):
         """

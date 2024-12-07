@@ -2,6 +2,8 @@ version: '3'
 services:
     classroommanager:
         image: zriiff24/unirides
-        env_file: .env
+        env_file: .env/
+        volumes:
+            - /home/zcr5/carpool.db:/usr/app/instance/carpool.db
         ports:
             - "80:8000"

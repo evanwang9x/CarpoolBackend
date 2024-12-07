@@ -3,6 +3,7 @@ import json
 from db import db, User, Carpool, Asset
 import re
 from datetime import datetime
+
 app = Flask(__name__)
 db_filename = "carpool.db"
 
@@ -21,6 +22,7 @@ def success_response(data, code=200):
 
 def failure_response(message, code=404):
     return json.dumps({"error": message}), code
+
 
 def validate_time_format(time_str):
     """
@@ -43,6 +45,7 @@ def validate_time_format(time_str):
     except (ValueError, TypeError):
         return False, None
 
+
 def check_driver_availability(driver_id, start_time):
     """
     Checks if driver has any existing carpools within 2 hours of given time.
@@ -58,13 +61,15 @@ def check_driver_availability(driver_id, start_time):
     """
     existing_carpools = Carpool.query.filter_by(driver_id=driver_id).all()
     new_ride_time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-    
+
     for carpool in existing_carpools:
         existing_time = datetime.strptime(carpool.start_time, "%Y-%m-%d %H:%M:%S")
         time_difference = abs((existing_time - new_ride_time).total_seconds() / 3600)
         if time_difference < 2:
             return False
     return True
+
+
 def validate_email_syntax(email):
     """
     Validates email syntax using regex pattern.
@@ -84,6 +89,7 @@ def validate_email_syntax(email):
     pattern = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     return re.match(pattern, email) is not None
 
+
 def check_passenger_availability(user_id, start_time):
     """
     Checks if user has any conflicting carpools within 2 hours of given time,
@@ -102,11 +108,11 @@ def check_passenger_availability(user_id, start_time):
     passenger_carpools = Carpool.query.join(Carpool.passengers).filter_by(id=user_id).all()
     all_carpools = driver_carpools + passenger_carpools
     new_ride_time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-    
+
     for carpool in all_carpools:
         existing_time = datetime.strptime(carpool.start_time, "%Y-%m-%d %H:%M:%S")
         time_difference = abs((existing_time - new_ride_time).total_seconds() / 3600)
-        if time_difference < 2: 
+        if time_difference < 2:
             return False
     return True
 
@@ -125,12 +131,12 @@ def create_user():
     Endpoint for creating a user
     """
     body = json.loads(request.data)
-    
+
     if not body.get("username"):
         return failure_response("Missing required field: username", 400)
     if not body.get("email"):
         return failure_response("Missing required field: email", 400)
-    
+
     if not validate_email_syntax(body.get("email")):
         return failure_response("Invalid email format", 400)
 
@@ -154,6 +160,7 @@ def create_user():
     db.session.add(new_user)
     db.session.commit()
     return success_response(new_user.serialize(), 201)
+
 
 @app.route("/api/users/<int:user_id>/")
 def get_user(user_id):
@@ -193,18 +200,19 @@ def login():
         "user": user.serialize()
     })
 
+
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
     body = json.loads(request.data)
-    
-    required_fields = ["start_location", "end_location", "start_time", 
-                      "total_capacity", "price", "car_type", 
-                      "license_plate", "driver_id"]
-    
+
+    required_fields = ["start_location", "end_location", "start_time",
+                       "total_capacity", "price", "car_type",
+                       "license_plate", "driver_id", "image_id"]
+
     for field in required_fields:
         if not body.get(field):
             return failure_response(f"Missing required field: {field}", 400)
-    
+
     price = body.get("price")
     try:
         price = float(price)
@@ -212,33 +220,38 @@ def create_carpool():
             return failure_response("Price cannot be negative", 400)
     except (TypeError, ValueError):
         return failure_response("Invalid price format", 400)
-    
+
     try:
         total_capacity = int(body.get("total_capacity"))
         if total_capacity <= 1:
             return failure_response("Total capacity must be greater than 1", 400)
     except (TypeError, ValueError):
         return failure_response("Invalid total capacity format", 400)
-    
+
     start_time = body.get("start_time")
     try:
         datetime_obj = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-        
+
         if datetime_obj <= datetime.now():
             return failure_response("Start time cannot be in the past", 400)
-            
+
         formatted_start_time = datetime_obj.strftime("%Y-%m-%d %H:%M:%S")
-        
+
     except ValueError:
         return failure_response("Invalid start time format. Please use YYYY-MM-DD HH:MM:SS format", 400)
-    
+
     driver_id = body.get("driver_id")
     driver = User.query.filter_by(id=driver_id).first()
     if driver is None:
         return failure_response("Driver not found", 404)
-    
+
     if not check_driver_availability(driver_id, formatted_start_time):
         return failure_response("Driver already has a carpool scheduled around this time", 400)
+
+    image_id = body.get("image_id")
+    image = Asset.query.filter_by(id=image_id).first()
+    if image is None:
+        return failure_response("Image not found", 404)
 
     new_carpool = Carpool(
         start_location=body.get("start_location"),
@@ -248,13 +261,15 @@ def create_carpool():
         price=price,
         car_type=body.get("car_type"),
         license_plate=body.get("license_plate"),
-        image=body.get("image"),
+        image_id=image_id,
         driver_id=driver_id
     )
-    
+
     db.session.add(new_carpool)
     db.session.commit()
     return success_response(new_carpool.serialize(), 201)
+
+
 @app.route("/api/carpools/all/")
 def get_all_carpools():
     """
@@ -294,7 +309,7 @@ def join_carpool(carpool_id):
     user = User.query.filter_by(id=user_id).first()
     if user is None:
         return failure_response("User not found!")
-        
+
     if len(carpool.passengers) >= carpool.total_capacity - 1:
         return failure_response("Carpool is full!", 400)
 
@@ -314,6 +329,7 @@ def join_carpool(carpool_id):
     db.session.commit()
     return success_response(carpool.serialize())
 
+
 @app.route("/api/carpools/<int:carpool_id>/leave/", methods=["POST"])
 def leave_carpool(carpool_id):
     """
@@ -326,7 +342,7 @@ def leave_carpool(carpool_id):
     body = json.loads(request.data)
     user_id = body.get("user_id")
     if user_id is None:
-        return failure_response("Missing user_id field", 400) 
+        return failure_response("Missing user_id field", 400)
 
     user = User.query.filter_by(id=user_id).first()
     if user is None:
@@ -452,7 +468,7 @@ def delete_carpool(carpool_id):
 
 
 @app.route("/api/upload/", methods=["POST"])
-def upload():
+def upload_image():
     """
     Endpoint for uploading an image to the server
     temporary, used for testing
