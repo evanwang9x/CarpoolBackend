@@ -27,11 +27,6 @@ def failure_response(message, code=404):
 def validate_time_format(time_str):
     """
     Validates if a time string is in correct format and not in the past.
-    Args:
-        time_str (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
-    Returns:
-        tuple: (is_valid: bool, converted_time: datetime or None)
-    Will fail if:
     - time_str is None or empty
     - time_str is not in correct format
     - time_str represents a past date/time
@@ -49,15 +44,10 @@ def validate_time_format(time_str):
 def check_driver_availability(driver_id, start_time):
     """
     Checks if driver has any existing carpools within 2 hours of given time.
-    Args:
-        driver_id (int): Valid user ID of the driver
-        start_time (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
-    Returns:
-        bool: True if driver is available, False if conflict exists
     Will fail if:
     - driver_id doesn't exist in database
     - start_time is not in correct format
-    - Database query fails
+    - start_time is within 2 hours of another carpool that user is in
     """
     existing_carpools = Carpool.query.filter_by(driver_id=driver_id).all()
     new_ride_time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
@@ -73,16 +63,9 @@ def check_driver_availability(driver_id, start_time):
 def validate_email_syntax(email):
     """
     Validates email syntax using regex pattern.
-
-    Args:
-        email (str): Email address to validate
-
-    Returns:
-        bool: True if email format is valid, False otherwise
-        
     Will fail if:
     - email is None or empty string
-    - email doesn't match standard email format (user@domain.tld)
+    - email doesn't match standard email format (user@domain.com)
     """
     if not email:
         return False
@@ -94,15 +77,9 @@ def check_passenger_availability(user_id, start_time):
     """
     Checks if user has any conflicting carpools within 2 hours of given time,
     either as driver or passenger.
-    Args:
-        user_id (int): Valid user ID to check
-        start_time (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
-    Returns:
-        bool: True if user is available, False if conflict exists
-    Will fail if:
     - user_id doesn't exist in database
     - start_time is not in correct format
-    - Database query fails
+    - start_time is within 2 hours of another carpool that user is in
     """
     driver_carpools = Carpool.query.filter_by(driver_id=user_id).all()
     passenger_carpools = Carpool.query.join(Carpool.passengers).filter_by(id=user_id).all()
@@ -128,7 +105,8 @@ def get_users():
 @app.route("/api/users/", methods=["POST"])
 def create_user():
     """
-    Endpoint for creating a user
+    Endpoint for creating a new user. Requires username and valid email in request body.
+    Errors: 400 if missing/invalid fields or username/email already exists.
     """
     body = json.loads(request.data)
 
@@ -165,7 +143,8 @@ def create_user():
 @app.route("/api/users/<int:user_id>/")
 def get_user(user_id):
     """
-    Get a specific user by id
+    Get user details by ID.
+    Errors: 404 if user not found.
     """
     user = User.query.filter_by(id=user_id).first()
     if user is None:
@@ -203,6 +182,11 @@ def login():
 
 @app.route("/api/carpools/", methods=["POST"])
 def create_carpool():
+    """
+    Create new carpool. Requires location, time, capacity, price, car details, driver_id, image_id.
+    Errors: 400 for invalid/missing fields, negative price, low capacity, past time, driver conflict.
+           404 if driver/image not found.
+    """
     body = json.loads(request.data)
 
     required_fields = ["start_location", "end_location", "start_time",
@@ -273,7 +257,8 @@ def create_carpool():
 @app.route("/api/carpools/all/")
 def get_all_carpools():
     """
-    Endpoint for getting all carpools without any filters
+    Get all carpools without filters.
+    Returns: List of all carpools.
     """
     carpools = Carpool.query.all()
     return success_response({
@@ -284,7 +269,9 @@ def get_all_carpools():
 @app.route("/api/carpools/<int:carpool_id>/")
 def get_carpool(carpool_id):
     """
-    Endpoint for getting a specific carpool by id
+    Get carpool details by ID.
+    Returns: Carpool data (200) if found.
+    Errors: 404 if carpool not found.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -295,7 +282,9 @@ def get_carpool(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/join/", methods=["POST"])
 def join_carpool(carpool_id):
     """
-    Endpoint for requesting to join a carpool as a pending rider
+    Request to join carpool as pending rider. Requires user_id in request body.
+    Returns: Updated carpool data (200) if joined.
+    Errors: 404 if carpool/user not found, 400 if carpool full/already joined/time conflict.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -333,7 +322,9 @@ def join_carpool(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/leave/", methods=["POST"])
 def leave_carpool(carpool_id):
     """
-    Endpoint for leaving a carpool by id
+    Leave a carpool. Requires user_id in request body.
+    Returns: Updated carpool data (200) if left.
+    Errors: 404 if carpool/user not found, 400 if user not in carpool.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -359,7 +350,9 @@ def leave_carpool(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/cancel_pending/", methods=["POST"])
 def cancel_pending_request(carpool_id):
     """
-    Endpoint for canceling a pending ride request
+    Cancel a pending ride request. Requires user_id in request body.
+    Returns: Updated carpool data (200) if cancelled.
+    Errors: 404 if carpool/user not found, 400 if user not pending.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -385,7 +378,9 @@ def cancel_pending_request(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/accept_rider/", methods=["POST"])
 def accept_rider(carpool_id):
     """
-    Endpoint for accepting a pending rider into the carpool
+    Accept pending rider into carpool. Requires user_id in request body.
+    Returns: Updated carpool data (200) if accepted.
+    Errors: 404 if carpool/user not found, 400 if user not pending/carpool full.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -416,7 +411,9 @@ def accept_rider(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/decline_rider/", methods=["POST"])
 def decline_rider(carpool_id):
     """
-    Endpoint for declining a pending rider's request to join the carpool
+    Decline pending rider's request. Requires user_id in request body.
+    Returns: Updated carpool data (200) if declined.
+    Errors: 404 if carpool/user not found, 400 if user not pending.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
@@ -443,7 +440,9 @@ def decline_rider(carpool_id):
 @app.route("/api/carpools/<int:carpool_id>/", methods=["DELETE"])
 def delete_carpool(carpool_id):
     """
-    Endpoint for deleting a carpool. ONLY DRIVER CAN DELETE
+    Endpoint for deleting a carpool. Requires user_id (must be driver) in request body.
+    Returns: Success message (200) if deleted.
+    Errors: 404 if not found, 400 if missing user_id, 403 if not driver.
     """
     carpool = Carpool.query.filter_by(id=carpool_id).first()
     if carpool is None:
