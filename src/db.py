@@ -87,7 +87,7 @@ class Carpool(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_location = db.Column(db.String, nullable=False)
     end_location = db.Column(db.String, nullable=False)
-    start_time = db.Column(db.Integer, nullable=False)
+    start_time = db.Column(db.String, nullable=False) 
     total_capacity = db.Column(db.Integer, nullable=False)
     price = db.Column(db.Float, nullable=False)
     car_type = db.Column(db.String, nullable=False)
@@ -97,10 +97,11 @@ class Carpool(db.Model):
     
     passengers = db.relationship("User", secondary=passenger_table, back_populates="joined_carpools")
     pending_passengers = db.relationship("User", secondary=pending_passenger_table, back_populates="pending_carpools")
+
     def __init__(self, **kwargs):
         self.start_location = kwargs.get("start_location")
         self.end_location = kwargs.get("end_location")
-        self.start_time = kwargs.get("start_time")
+        self.start_time = kwargs.get("start_time") 
         self.total_capacity = kwargs.get("total_capacity")
         price = kwargs.get("price")
         if price is None:
