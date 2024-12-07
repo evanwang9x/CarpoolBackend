@@ -66,6 +66,7 @@ class User(db.Model):
             "email": self.email,
             "phone_number": self.phone_number,
             "username": self.username,
+            "password": self.password,
             "hosted_carpools": [c.simple_serialize() for c in self.hosted_carpools],
             "joined_carpools": [c.simple_serialize() for c in self.joined_carpools],
             "pending_carpools": [c.simple_serialize() for c in self.pending_carpools]
@@ -112,8 +113,7 @@ class Carpool(db.Model):
         self.driver_id = kwargs.get("driver_id")
 
     def serialize(self):
-        driver = User.query.filter_by(id=self.driver_id).first()
-        current_riders = [driver.email] + [p.email for p in self.passengers]
+        driver = User.query.filter_by(id=self.driver_id).first().simple_serialize()
         return {
             "id": self.id,
             "start_location": self.start_location,
@@ -125,9 +125,9 @@ class Carpool(db.Model):
             "car_type": self.car_type,
             "license_plate": self.license_plate,
             "image": Asset.query.filter_by(id=self.image_id).first().serialize(),
-            "driver": driver.simple_serialize(),
-            "current_riders": current_riders,
-            "pending_riders": [p.email for p in self.pending_passengers]
+            "driver": driver,
+            "current_riders": [driver] + [p.simple_serialize() for p in self.passengers],
+            "pending_riders": [p.simple_serialize() for p in self.pending_passengers]
         }
 
     def simple_serialize(self):
