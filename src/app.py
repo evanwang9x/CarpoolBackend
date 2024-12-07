@@ -24,8 +24,15 @@ def failure_response(message, code=404):
 
 def validate_time_format(time_str):
     """
-    Validates if the time string is in correct format and not in the past
-    Returns tuple (is_valid, converted_time)
+    Validates if a time string is in correct format and not in the past.
+    Args:
+        time_str (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
+    Returns:
+        tuple: (is_valid: bool, converted_time: datetime or None)
+    Will fail if:
+    - time_str is None or empty
+    - time_str is not in correct format
+    - time_str represents a past date/time
     """
     try:
         time = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
@@ -38,8 +45,16 @@ def validate_time_format(time_str):
 
 def check_driver_availability(driver_id, start_time):
     """
-    Checks if driver has any existing carpools at the given time
-    Returns True if driver is available, False otherwise
+    Checks if driver has any existing carpools within 2 hours of given time.
+    Args:
+        driver_id (int): Valid user ID of the driver
+        start_time (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
+    Returns:
+        bool: True if driver is available, False if conflict exists
+    Will fail if:
+    - driver_id doesn't exist in database
+    - start_time is not in correct format
+    - Database query fails
     """
     existing_carpools = Carpool.query.filter_by(driver_id=driver_id).all()
     new_ride_time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
@@ -52,8 +67,17 @@ def check_driver_availability(driver_id, start_time):
     return True
 def validate_email_syntax(email):
     """
-    Validates email syntax using regex pattern
-    Returns True if email is valid, False otherwise
+    Validates email syntax using regex pattern.
+
+    Args:
+        email (str): Email address to validate
+
+    Returns:
+        bool: True if email format is valid, False otherwise
+        
+    Will fail if:
+    - email is None or empty string
+    - email doesn't match standard email format (user@domain.tld)
     """
     if not email:
         return False
@@ -62,8 +86,17 @@ def validate_email_syntax(email):
 
 def check_passenger_availability(user_id, start_time):
     """
-    Checks if user has any conflicting carpools (either as driver or passenger)
-    Returns True if user is available, False otherwise
+    Checks if user has any conflicting carpools within 2 hours of given time,
+    either as driver or passenger.
+    Args:
+        user_id (int): Valid user ID to check
+        start_time (str): Time string in format 'YYYY-MM-DD HH:MM:SS'
+    Returns:
+        bool: True if user is available, False if conflict exists
+    Will fail if:
+    - user_id doesn't exist in database
+    - start_time is not in correct format
+    - Database query fails
     """
     driver_carpools = Carpool.query.filter_by(driver_id=user_id).all()
     passenger_carpools = Carpool.query.join(Carpool.passengers).filter_by(id=user_id).all()
