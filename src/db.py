@@ -67,9 +67,9 @@ class User(db.Model):
             "phone_number": self.phone_number,
             "username": self.username,
             "password": self.password,
-            "hosted_carpools": [c.simple_serialize() for c in self.hosted_carpools],
-            "joined_carpools": [c.simple_serialize() for c in self.joined_carpools],
-            "pending_carpools": [c.simple_serialize() for c in self.pending_carpools]
+            "hosted_carpools": [c.serialize() for c in self.hosted_carpools],
+            "joined_carpools": [c.serialize() for c in self.joined_carpools],
+            "pending_carpools": [c.serialize() for c in self.pending_carpools]
         }
 
     def simple_serialize(self):
@@ -141,7 +141,7 @@ class Carpool(db.Model):
             "price": self.price,
             "car_type": self.car_type,
             "license_plate": self.license_plate,
-            "image": self.image
+            "image": Asset.query.filter_by(id=self.image_id).first().serialize()
         }
 
 
